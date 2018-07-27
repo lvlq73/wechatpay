@@ -1,11 +1,10 @@
 package com.wechat.pay;
 
-import com.alibaba.fastjson.JSON;
 import com.wechat.config.Content;
-import com.wechat.entity.*;
-import com.wechat.enums.RefundExceptionEmnu;
+import com.wechat.entity.ResultVo;
+import com.wechat.entity.WeChatPayParams;
+import com.wechat.entity.WeChatPayRequest;
 import com.wechat.interfaces.IPayAfterSuccess;
-import com.wechat.interfaces.IRefundAfterSuccess;
 import com.wechat.utils.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -98,18 +97,18 @@ public class WeChatPayUtil {
      * 支付成功后回调方法
      * @param response
      * @param request
-     * @param iAfterSuccess（自定义结果处理方法）
+     * @param iPayAfterSuccess（自定义结果处理方法）
      * @return
      */
-    public static String  wxPaymentResult(HttpServletResponse response, HttpServletRequest request, IPayAfterSuccess iAfterSuccess){
+    public static String  wxPaymentResult(HttpServletResponse response, HttpServletRequest request, IPayAfterSuccess iPayAfterSuccess){
         String xmlResult = WeChatUtil.getWeChatResponse(request);
         //System.out.println(xmlResult);
         HashMap<String,Object> result = ConvertUtil.readStringXmlOut(xmlResult);
         //支付结果通知数据处理
         StringBuilder confirmResult = new StringBuilder();
         try{
-            if(iAfterSuccess !=null){
-                iAfterSuccess.afterPaySuccess(result);
+            if(iPayAfterSuccess !=null){
+                iPayAfterSuccess.afterPaySuccess(result);
             }
             confirmResult.append("<xml>");
             confirmResult.append("<return_code><![CDATA[SUCCESS]]></return_code>");
@@ -126,103 +125,6 @@ public class WeChatPayUtil {
         }
     }
 
-    /**
-     * 退款申请方法
-     * @param params
-     * @return
-     */
-    public static ResultVo wechatRefund(WeChatRefundParmas params){
-        //加密获取sign
-        HashMap<String,String> signMap = new HashMap<String,String>();
-        signMap.put("appid",params.appid);
-        signMap.put("mch_id",params.mch_id);
-        signMap.put("nonce_str",params.nonce_str);
-        signMap.put("out_trade_no",params.out_trade_no);
-        signMap.put("out_refund_no",params.out_refund_no);
-        signMap.put("total_fee",params.total_fee+"");
-        signMap.put("refund_fee",params.refund_fee+"");
-        signMap.put("notify_url",params.notify_url);
-        String sign = WeChatUtil.getSign(signMap,params.key);
-        //请求参数
-        WeChatRefundRequest entity = new WeChatRefundRequest();
-        entity.appid=params.appid;
-         entity.mch_id=params.mch_id;
-         entity.nonce_str=params.nonce_str;
-         entity.out_trade_no=params.out_trade_no;
-         entity.out_refund_no=params.out_refund_no;
-         entity.total_fee=params.total_fee;
-         entity.refund_fee=params.refund_fee;
-         entity.notify_url=params.notify_url;
-        String xmlStr = ConvertUtil.objectToXml(entity).replace("__","_");
-        String responseStr = HttpUtil.httpResFulReturnString(Content.REFUND,"POST","text/xml;charset=utf-8","text/xml;charset=utf-8",xmlStr,true);
-        logger.info("退款放回值");
-        logger.info(responseStr);
-        try {
-            responseStr = new String(responseStr.getBytes("ISO-8859-1"),"utf-8");
-        } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
-        }
-        // System.out.println(responseStr);
-        HashMap<String,Object> result = ConvertUtil.readStringXmlOut(responseStr);
-
-        if(Content.SUCCESS.equals(result.get("return_code"))){
-            if (Content.OK.equals(result.get("return_msg"))){
-                //退款成功
-                return ResultVoUtil.success();
-            }else{
-                logger.info(JSON.toJSONString(result));
-                return ResultVoUtil.fail(RefundExceptionEmnu.REFUND_FAILD);
-            }
-        }else {
-            //说明是系统级别的参数错误（商户id不对之类）
-            logger.info(JSON.toJSONString(result));
-            return  ResultVoUtil.fail(RefundExceptionEmnu.REFUND_SYSTEM_ERROR);
-        }
-    }
-
-    /**
-     * 退款成功后回调方法
-     * @param response
-     * @param request
-     * @param iAfterSuccess（自定义结果处理方法）
-     * @return
-     */
-    public static String  wxRefundResult(HttpServletResponse response, HttpServletRequest request, IRefundAfterSuccess iAfterSuccess){
-        String xmlResult = WeChatUtil.getWeChatResponse(request);
-        //System.out.println(xmlResult);
-        HashMap<String,Object> result = ConvertUtil.readStringXmlOut(xmlResult);
-        //支付结果通知数据处理
-        StringBuilder confirmResult = new StringBuilder();
-        try{
-            if(iAfterSuccess !=null){
-                iAfterSuccess.afterRefundSuccess(result);
-            }
-            confirmResult.append("<xml>");
-            confirmResult.append("<return_code><![CDATA[SUCCESS]]></return_code>");
-            confirmResult.append("<return_msg><![CDATA[OK]]></return_msg>");
-            confirmResult.append("</xml> ");
-            return confirmResult.toString();
-        }catch (Exception e){
-            logger.error(e.getMessage());
-            confirmResult.append("<xml>");
-            confirmResult.append("<return_code><![CDATA[FAIL]]></return_code>");
-            confirmResult.append("<return_msg><![CDATA[退款处理异常]]></return_msg>");
-            confirmResult.append("</xml> ");
-            return confirmResult.toString();
-        }
-    }
-
-    /**
-     * 微信退款成功后 加密内容解密
-     * @param result
-     * @return
-     */
-    public static HashMap<String,Object>  refundDeciphering(HashMap<String,Object> result){
-        String xmlResult=WeChatUtil.decodeRefund(result.get("req_info").toString(),"微信Secret");
-        HashMap<String,Object> zmlresult = ConvertUtil.readStringXmlOut(xmlResult);
-        return zmlresult;
-    }
-
     @Deprecated
     public static void wechatPayTest(WeChatPayParams params){
         //自定义处理方法
@@ -234,12 +136,12 @@ public class WeChatPayUtil {
     }
 
     @Deprecated
-    public static void wxPaymentResultTest(HttpServletResponse response, HttpServletRequest request, IPayAfterSuccess iAfterSuccess){
+    public static void wxPaymentResultTest(HttpServletResponse response, HttpServletRequest request, IPayAfterSuccess iPayAfterSuccess){
         //自定义处理方法
-        if(iAfterSuccess !=null){
+        if(iPayAfterSuccess !=null){
             HashMap<String, Object> test = new HashMap<String, Object>();
             test.put("test","afterPaySuccess");
-            iAfterSuccess.afterPaySuccess(test);
+            iPayAfterSuccess.afterPaySuccess(test);
         }
     }
 }
