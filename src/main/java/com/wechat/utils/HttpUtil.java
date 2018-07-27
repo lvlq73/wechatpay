@@ -1,11 +1,16 @@
 package com.wechat.utils;
 
 import com.ning.http.client.*;
+import org.apache.http.ssl.SSLContexts;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
 
 import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSession;
+import java.security.KeyStore;
 import java.util.Map;
 import java.util.Set;
 
@@ -17,8 +22,24 @@ public class HttpUtil {
 
     private static final  String defualContentType="application/json;charset=utf-8";
     private static final  String defualAccepType="application/json;charset=utf-8";
-
     private static AsyncHttpClientConfig.Builder configBuilder = null;
+
+    private static SSLContext wx_ssl_context = null; //微信支付ssl证书
+
+    static{
+        Resource resource = new ClassPathResource("证书路径");//获取微信证书 或者直接从文件流读取 填写自己的证书路径
+        char[] keyStorePassword ="自己证书密码".toCharArray(); //证书密码 自己填写
+        try {
+            KeyStore keystore = KeyStore.getInstance("PKCS12");
+            keystore.load(resource.getInputStream(), keyStorePassword);
+            wx_ssl_context = SSLContexts.custom()
+                    .loadKeyMaterial(keystore, keyStorePassword)//这里也是写密码的
+                    .build();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
     /**
      * 初始化配置
      */
@@ -33,7 +54,7 @@ public class HttpUtil {
             //configBuilder.setAllowPoolingConnections(true);
         }
         if(isSSL){
-            configBuilder.setSSLContext(null);
+            configBuilder.setSSLContext(wx_ssl_context);
             //configBuilder.setSslSessionCacheSize();
             configBuilder.setSslSessionTimeout(6000);
         }
@@ -286,4 +307,5 @@ public class HttpUtil {
             return true;
         }
     }
+
 }
