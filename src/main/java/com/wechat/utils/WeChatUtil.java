@@ -135,21 +135,4 @@ public class WeChatUtil {
         }
         return result;
     }
-
-    /**
-     * 商户退款解密
-     * @param data 要解密的数据
-     * @param wecatSecret Secret 商户密钥
-     * @return 解密后的内容
-     */
-    public static  String  decodeRefund(String data,String wecatSecret){
-        try {
-            byte[] ss= Base64Utils.decode(data);
-            String md=MD5.getMD5(wecatSecret);
-            return  Encrypt.Aes256Decode(ss,md.getBytes());
-        }catch (Exception e){
-            e.printStackTrace();
-            return  null;
-        }
-    }
 }
