@@ -6,7 +6,7 @@ public class Content {
      */
     public  final  static  String  SUCCESS="SUCCESS";
     public  final  static  String  FAIL="FAIL";
-
+    public  final  static  String  OK="OK";
     /**
      * 统一下单
      */
