@@ -100,7 +100,7 @@ public class WeChatPayUtil {
      * @param iAfterSuccess（自定义结果处理方法）
      * @return
      */
-    public static String wxPaymentResult(HttpServletResponse response, HttpServletRequest request, IPayAfterSuccess iAfterSuccess){
+    public static void wxPaymentResult(HttpServletResponse response, HttpServletRequest request, IPayAfterSuccess iAfterSuccess){
         String xmlResult = WeChatUtil.getWeChatResponse(request);
         //System.out.println(xmlResult);
         HashMap<String,Object> result = ConvertUtil.readStringXmlOut(xmlResult);
@@ -110,18 +110,10 @@ public class WeChatPayUtil {
             if(iAfterSuccess !=null){
                 iAfterSuccess.afterPaySuccess(result);
             }
-            confirmResult.append("<xml>");
-            confirmResult.append("<return_code><![CDATA[SUCCESS]]></return_code>");
-            confirmResult.append("<return_msg><![CDATA[OK]]></return_msg>");
-            confirmResult.append("</xml> ");
-            return confirmResult.toString();
+            WeChatUtil.returnParams(response,"SUCCESS","OK");
         }catch (Exception e){
             logger.error(e.getMessage());
-            confirmResult.append("<xml>");
-            confirmResult.append("<return_code><![CDATA[FAIL]]></return_code>");
-            confirmResult.append("<return_msg><![CDATA[订单支付处理异常]]></return_msg>");
-            confirmResult.append("</xml> ");
-            return confirmResult.toString();
+            WeChatUtil.returnParams(response,"FAIL","订单支付处理异常");
         }
     }
 
@@ -190,7 +182,7 @@ public class WeChatPayUtil {
      * @param iAfterSuccess（自定义结果处理方法）
      * @return
      */
-    public static String wxRefundResult(HttpServletResponse response, HttpServletRequest request, IRefundAfterSuccess iAfterSuccess){
+    public static void wxRefundResult(HttpServletResponse response, HttpServletRequest request, IRefundAfterSuccess iAfterSuccess){
         String xmlResult = WeChatUtil.getWeChatResponse(request);
         //System.out.println(xmlResult);
         HashMap<String,Object> result = ConvertUtil.readStringXmlOut(xmlResult);
@@ -200,18 +192,10 @@ public class WeChatPayUtil {
             if(iAfterSuccess !=null){
                 iAfterSuccess.afterRefundSuccess(result);
             }
-            confirmResult.append("<xml>");
-            confirmResult.append("<return_code><![CDATA[SUCCESS]]></return_code>");
-            confirmResult.append("<return_msg><![CDATA[OK]]></return_msg>");
-            confirmResult.append("</xml> ");
-            return confirmResult.toString();
+            WeChatUtil.returnParams(response,"SUCCESS","OK");
         }catch (Exception e){
             logger.error(e.getMessage());
-            confirmResult.append("<xml>");
-            confirmResult.append("<return_code><![CDATA[FAIL]]></return_code>");
-            confirmResult.append("<return_msg><![CDATA[退款处理异常]]></return_msg>");
-            confirmResult.append("</xml> ");
-            return confirmResult.toString();
+            WeChatUtil.returnParams(response,"FAIL","退款处理异常");
         }
     }
 
