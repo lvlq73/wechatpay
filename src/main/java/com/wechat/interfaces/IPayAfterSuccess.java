@@ -10,5 +10,5 @@ public interface IPayAfterSuccess {
      * 支付成功后自定义方法
      * @param result
      */
-    public void afterPaySuccess(HashMap<String,Object> result );
+    public void afterPaySuccess(HashMap<String, Object> result);
 }

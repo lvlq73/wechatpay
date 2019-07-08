@@ -20,9 +20,13 @@ import java.util.Set;
 public class HttpUtil {
     private static Logger logger = LoggerFactory.getLogger(HttpUtil.class);
 
-    private static final  String defualContentType="application/json;charset=utf-8";
-    private static final  String defualAccepType="application/json;charset=utf-8";
+    private static final String jsonContentType="application/json;charset=utf-8";
+    private static final String jsonAccepType="application/json;charset=utf-8";
+    private static final String defualFormContentType="application/x-www-form-urlencoded;charset=utf-8";
+    private static final String defualAllAccepType="*/*;charset=utf-8";
     private static AsyncHttpClientConfig.Builder configBuilder = null;
+    private static AsyncHttpClient asyncHttpClient = null;
+    private static AsyncHttpClient asyncHttpSSLClient = null;
 
     private static SSLContext wx_ssl_context = null; //微信支付ssl证书
 
@@ -47,18 +51,30 @@ public class HttpUtil {
         if(configBuilder == null){
             configBuilder=new AsyncHttpClientConfig.Builder().setHostnameVerifier(new TrustAnyHostnameVerifier());
             configBuilder.setMaxConnections(500);
+            configBuilder.setMaxConnectionsPerHost(500);
              /*使用默认值：*/
             configBuilder.setConnectTimeout(3000);
             configBuilder.setReadTimeout(5000);
             configBuilder.setRequestTimeout(6000);
+            configBuilder.setAllowPoolingConnections(true);
+            configBuilder.setPooledConnectionIdleTimeout(180000);
+            configBuilder.setMaxRequestRetry(2);
             //configBuilder.setAllowPoolingConnections(true);
         }
         if(isSSL){
             configBuilder.setSSLContext(wx_ssl_context);
             //configBuilder.setSslSessionCacheSize();
             configBuilder.setSslSessionTimeout(6000);
+            if(asyncHttpSSLClient==null){
+                asyncHttpSSLClient = new AsyncHttpClient(configBuilder.build());
+            }
+            return asyncHttpSSLClient;
+        }else{
+            if(asyncHttpClient==null){
+                asyncHttpClient = new AsyncHttpClient(configBuilder.build());
+            }
+            return asyncHttpClient;
         }
-       return new AsyncHttpClient(configBuilder.build());
     }
 
     /**
@@ -67,7 +83,7 @@ public class HttpUtil {
      * @return
      */
     public static String httpResFulGET(String url){
-        return httpResFulReturnString(url,"GET",defualContentType,defualAccepType,null,false);
+        return httpResFulReturnString(url,"GET",defualFormContentType,defualAllAccepType,null,false);
     }
 
     /**
@@ -76,8 +92,8 @@ public class HttpUtil {
      * @param data
      * @return
      */
-    public static String httpResFulPUT(String url,String data){
-        return httpResFulReturnString(url,"GET",defualContentType,defualAccepType,data,false);
+    public static String httpResFulPUT(String url, Object data){
+        return httpResFulReturnString(url,"GET",defualFormContentType,defualAllAccepType,data,false);
     }
 
     /**
@@ -86,8 +102,8 @@ public class HttpUtil {
      * @param data
      * @return
      */
-    public static String httpResFulPost(String url,String data){
-        return httpResFulReturnString(url,"POST",defualContentType,defualAccepType,data,false);
+    public static String httpResFulPost(String url, Object data){
+        return httpResFulReturnString(url,"POST",defualFormContentType,defualAllAccepType,data,false);
     }
 
     /**
@@ -96,7 +112,7 @@ public class HttpUtil {
      * @return
      */
     public static String httpResFulDelete (String url){
-        return httpResFulReturnString(url,"DELETE ",defualContentType,defualAccepType,null,false);
+        return httpResFulReturnString(url,"DELETE ",defualFormContentType,defualAllAccepType,null,false);
     }
 
     /**
@@ -106,8 +122,8 @@ public class HttpUtil {
      * @param data
      * @return
      */
-    public static String httpResFul(String url,String method,String data){
-        return httpResFulReturnString(url,method,defualContentType,defualAccepType,data,false);
+    public static String httpResFul(String url, String method, Object data){
+        return httpResFulReturnString(url,method,defualFormContentType,defualAllAccepType,data,false);
     }
 
     /**
@@ -119,43 +135,43 @@ public class HttpUtil {
      * @param data 数据
      * @return
      */
-    public static String httpResFulReturnString(String url,String method,String contentType,String accept,Object data,boolean isSSL){
+    public static String httpResFulReturnString(String url, String method, String contentType, String accept, Object data, boolean isSSL){
         AsyncHttpClient client =getClient(isSSL);
         String result = null;
         logger.info("url: " + url);
         logger.info("request: " + data);
         try {
-                RequestBuilder mRequestBuilder = new RequestBuilder();
-                mRequestBuilder.setUrl(url);
-                mRequestBuilder.setMethod(method);
-                mRequestBuilder.addHeader("Content-Type",StringUtil.isEmpty(contentType)?defualContentType:contentType);
-                mRequestBuilder.addHeader("Accept",StringUtil.isEmpty(accept)?defualAccepType:accept);
-               if(data!=null){
-                   if(data instanceof  Map){
-                       Map  map = (Map) data;
-                       if(map!=null&&map.size()>0){
-                           Set<String> keys = map.keySet();
-                           for(String key:keys){
-                               mRequestBuilder.addFormParam(key, (String) map.get(key));
-                           }
-                       }
-                   }else if(data instanceof String){
-                       mRequestBuilder.setBody((String)data);
-                   }else if(data instanceof byte[]){
-                       mRequestBuilder.setBody((byte[])data);
-                   }
-               }
-                Request request = mRequestBuilder.build();
-                ListenableFuture<Response> rp = client.executeRequest(request,new AsyncCompletionHandler(){
-                    public Object onCompleted(Response response) throws Exception {
-                        return response;
+            RequestBuilder mRequestBuilder = new RequestBuilder();
+            mRequestBuilder.setUrl(url);
+            mRequestBuilder.setMethod(method);
+            mRequestBuilder.addHeader("Content-Type",StringUtil.isEmpty(contentType)?defualFormContentType:contentType);
+            mRequestBuilder.addHeader("Accept",StringUtil.isEmpty(accept)?defualAllAccepType:accept);
+            if(data!=null){
+                if(data instanceof Map){
+                    Map map = (Map) data;
+                    if(map!=null&&map.size()>0){
+                        Set<String> keys = map.keySet();
+                        for(String key:keys){
+                            mRequestBuilder.addFormParam(key, (String) map.get(key));
+                        }
                     }
-                });
+                }else if(data instanceof String){
+                    mRequestBuilder.setBody((String)data);
+                }else if(data instanceof byte[]){
+                    mRequestBuilder.setBody((byte[])data);
+                }
+            }
+            Request request = mRequestBuilder.build();
+            ListenableFuture<Response> rp = client.executeRequest(request,new AsyncCompletionHandler(){
+                public Object onCompleted(Response response) throws Exception {
+                    return response;
+                }
+            });
 
-                Response response = rp.get();
-                result =  response.getResponseBody();
+            Response response = rp.get();
+            result =  response.getResponseBody();
         } catch (Exception e) {
-             logger.error(e.getMessage());
+            logger.error(e.getMessage());
         }finally {
             close(client);
         }
@@ -168,7 +184,7 @@ public class HttpUtil {
      * @return
      */
     public static byte[] httpResFulReturnByteGET(String url){
-        return httpResFulReturnByte(url,"GET",defualContentType,defualAccepType,null,false);
+        return httpResFulReturnByte(url,"GET",defualFormContentType,defualAllAccepType,null,false);
     }
     /**
      * put请求
@@ -176,8 +192,8 @@ public class HttpUtil {
      * @param data
      * @return
      */
-    public static byte[] httpResFulReturnBytePUT(String url,String data){
-        return httpResFulReturnByte(url,"GET",defualContentType,defualAccepType,data,false);
+    public static byte[] httpResFulReturnBytePUT(String url, Object data){
+        return httpResFulReturnByte(url,"GET",defualFormContentType,defualAllAccepType,data,false);
     }
     /**
      * post请求
@@ -185,8 +201,8 @@ public class HttpUtil {
      * @param data
      * @return
      */
-    public static byte[] httpResFulReturnBytePost(String url,String data){
-        return httpResFulReturnByte(url,"POST",defualContentType,defualAccepType,data,false);
+    public static byte[] httpResFulReturnBytePost(String url, Object data){
+        return httpResFulReturnByte(url,"POST",defualFormContentType,defualAllAccepType,data,false);
     }
     /**
      * delete请求
@@ -194,7 +210,7 @@ public class HttpUtil {
      * @return
      */
     public static byte[] httpResFulReturnByteDelete (String url){
-        return httpResFulReturnByte(url,"DELETE ",defualContentType,defualAccepType,null,false);
+        return httpResFulReturnByte(url,"DELETE ",defualFormContentType,defualAllAccepType,null,false);
     }
     /**
      * 自定义请求方式
@@ -203,8 +219,8 @@ public class HttpUtil {
      * @param data
      * @return
      */
-    public static byte[] httpResFulReturnByte(String url,String method,String data){
-        return httpResFulReturnByte(url,method,defualContentType,defualAccepType,data,false);
+    public static byte[] httpResFulReturnByte(String url, String method, Object data){
+        return httpResFulReturnByte(url,method,defualFormContentType,defualAllAccepType,data,false);
     }
     /**
      * http请求
@@ -215,7 +231,7 @@ public class HttpUtil {
      * @param data 数据
      * @return
      */
-    public static byte[]  httpResFulReturnByte(String url,String method,String contentType,String accept,Object data,boolean isSSL){
+    public static byte[]  httpResFulReturnByte(String url, String method, String contentType, String accept, Object data, boolean isSSL){
         AsyncHttpClient client =getClient(isSSL);
         byte[]  result = null;
         logger.info("url: " + url);
@@ -224,11 +240,11 @@ public class HttpUtil {
             RequestBuilder mRequestBuilder = new RequestBuilder();
             mRequestBuilder.setUrl(url);
             mRequestBuilder.setMethod(method);
-            mRequestBuilder.addHeader("Content-Type",StringUtil.isEmpty(contentType)?defualContentType:contentType);
-            mRequestBuilder.addHeader("Accept",StringUtil.isEmpty(accept)?defualAccepType:accept);
+            mRequestBuilder.addHeader("Content-Type",StringUtil.isEmpty(contentType)?defualFormContentType:contentType);
+            mRequestBuilder.addHeader("Accept",StringUtil.isEmpty(accept)?defualAllAccepType:accept);
             if(data!=null){
-                if(data instanceof  Map){
-                    Map  map = (Map) data;
+                if(data instanceof Map){
+                    Map map = (Map) data;
                     if(map!=null&&map.size()>0){
                         Set<String> keys = map.keySet();
                         for(String key:keys){
@@ -262,15 +278,15 @@ public class HttpUtil {
      * 关闭方法
      */
     public static void close(AsyncHttpClient client ){
-        if (client != null) {
+        /*if (client != null) {
             client.close();
             client = null;
-        }
+        }*/
     }
 
     //post请求方法(测试用)
     @Deprecated
-    public  String sendPost(String url, String data) {
+    public String sendPost(String url, String data) {
         AsyncHttpClient client =getClient(false);
         String result = null;
         logger.info("url: " + url);
@@ -282,7 +298,7 @@ public class HttpUtil {
                 mRequestBuilder.setMethod("GET");
                 mRequestBuilder.addHeader("Content-Type","application/json;charset=utf-8");
                 mRequestBuilder.addHeader("Accept","text/json");
-               // mRequestBuilder.addHeader("Charset","UTF-8");
+                // mRequestBuilder.addHeader("Charset","UTF-8");
                 mRequestBuilder.setBody(data);
                 Request request = mRequestBuilder.build();
                 ListenableFuture<Response> rp = client.executeRequest(request,new AsyncCompletionHandler(){

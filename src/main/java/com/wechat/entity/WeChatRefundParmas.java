@@ -5,9 +5,11 @@ package com.wechat.entity;
  */
 public class WeChatRefundParmas extends BaseEntity{
 
-    public  String out_refund_no;
+    public String out_refund_no;
 
-    public  Integer refund_fee;
+    public Integer refund_fee;
 
-    public  String key;
+    public String refund_desc;
+
+    public String key;
 }

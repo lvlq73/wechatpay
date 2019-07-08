@@ -1,5 +1,6 @@
 package com.wechat.entity;
 
+
 import com.wechat.interfaces.IOrderAfterSuccess;
 
 /**
@@ -17,5 +18,5 @@ public class WeChatPayParams extends BaseEntity{
 
     public String openid;
 
-    public IOrderAfterSuccess  obj;
+    public IOrderAfterSuccess obj;
 }

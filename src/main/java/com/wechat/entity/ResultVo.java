@@ -33,7 +33,7 @@ public class ResultVo<T> {
     public Boolean getSuccess() {
         return success;
     }
-    public  Boolean isSuccess(){
+    public Boolean isSuccess(){
         return success;
     }
 

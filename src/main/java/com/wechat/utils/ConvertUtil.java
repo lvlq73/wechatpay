@@ -1,5 +1,7 @@
 package com.wechat.utils;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.thoughtworks.xstream.XStream;
 import com.thoughtworks.xstream.core.util.QuickWriter;
 import com.thoughtworks.xstream.io.HierarchicalStreamWriter;
@@ -9,6 +11,8 @@ import org.dom4j.Document;
 import org.dom4j.DocumentException;
 import org.dom4j.DocumentHelper;
 import org.dom4j.Element;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.Writer;
 import java.util.HashMap;
@@ -19,59 +23,22 @@ import java.util.List;
  */
 public class ConvertUtil {
 
-    private static XStream  xstream = new XStream();
+    public static Logger logger = LoggerFactory.getLogger(ConvertUtil.class);
+
+    private static XmlMapper xmlMapper = new XmlMapper();
     /**
-     * 扩展xstream，使其支持CDATA块
-     */
-    private static XStream xstreamCDATA = new XStream(new XppDriver() {
-        public HierarchicalStreamWriter createWriter(Writer out) {
-            return new PrettyPrintWriter(out) {
-                // 对全部xml节点的转换都添加CDATA标记
-                boolean cdata = true;
-                public void startNode(String name, Class clazz) {
-                    super.startNode(name, clazz);
-                    if(name.equals("CreateTime")){
-                        cdata = false;
-                    }
-                }
-                protected void writeText(QuickWriter writer, String text) {
-                    if (cdata) {
-                        writer.write("<![CDATA[");
-                        writer.write(text);
-                        writer.write("]]>");
-                    } else {
-                        writer.write(text);
-                    }
-                }
-            };
-        }
-    });
-    /**
-     * map转xml
-     * @param map
-     * @return
-     */
-    public static String mapToXml(HashMap<String,Object> map) {
-        xstream.alias("xml", map.getClass());
-        return xstream.toXML(map);
-    }
-    /**
-     * object 转xml (有CDATA标记)
-     * @param obj
-     * @return
-     */
-    public static String objectToXmlCDATA(Object obj) {
-        xstreamCDATA.alias("xml", obj.getClass());
-        return xstreamCDATA.toXML(obj);
-    }
-    /**
-     * object 转xml
+     * map转xml String
      * @param obj
      * @return
      */
     public static String objectToXml(Object obj) {
-        xstream.alias("xml", obj.getClass());
-        return xstream.toXML(obj);
+        String xml = "";
+        try {
+            xml = xmlMapper.writeValueAsString(obj);
+        } catch (JsonProcessingException e) {
+            logger.error(e.getMessage());
+        }
+        return xml;
     }
     /**
      * xml转map对象

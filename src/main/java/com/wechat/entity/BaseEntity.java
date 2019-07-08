@@ -11,5 +11,5 @@ public class BaseEntity {
 
     public int total_fee;
 
-    public  String notify_url;
+    public String notify_url;
 }

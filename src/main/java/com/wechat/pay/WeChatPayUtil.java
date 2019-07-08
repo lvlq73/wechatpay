@@ -29,13 +29,13 @@ public class WeChatPayUtil {
     public static ResultVo wechatPay(WeChatPayParams params){
         try {
             //加密获取sign
-            HashMap<String,String> signMap = new HashMap<String,String>();
+            HashMap<String,Object> signMap = new HashMap<String,Object>();
             signMap.put("appid",params.appid);
             signMap.put("mch_id",params.mch_id);
             signMap.put("nonce_str",params.nonce_str);
             signMap.put("body",params.body);
             signMap.put("out_trade_no",params.out_trade_no);
-            signMap.put("total_fee", StringUtil.toString(params.total_fee));
+            signMap.put("total_fee", Usual.f_getString(params.total_fee));
             signMap.put("spbill_create_ip",params.spbill_create_ip);
             signMap.put("notify_url",params.notify_url);
             signMap.put("trade_type",params.trade_type);
@@ -55,11 +55,10 @@ public class WeChatPayUtil {
             entity.trade_type = params.trade_type;
             entity.openid = params.openid;
             entity.sign = sign;
-            String xmlStr = ConvertUtil.objectToXml(entity).replace("__","_");
+            String xmlStr = ConvertUtil.objectToXml(entity);
             // System.out.println(xmlStr);
             String responseStr = HttpUtil.httpResFulReturnString(Content.UNIFIEDORDER,"POST","text/xml;charset=utf-8","text/xml;charset=utf-8",xmlStr,false);
-
-                responseStr = new String(responseStr.getBytes("ISO-8859-1"),"utf-8");
+            responseStr = new String(responseStr.getBytes("ISO-8859-1"),"utf-8");
             // System.out.println(responseStr);
             HashMap<String,Object> result = ConvertUtil.readStringXmlOut(responseStr);
             if(Content.SUCCESS.equals(result.get("return_code"))&&Content.SUCCESS.equals(result.get("result_code"))){
@@ -70,20 +69,20 @@ public class WeChatPayUtil {
                     params.obj.afterSuccess(result);
                 }
                 // 支付 准备ID
-                String prepayId=String.valueOf(result.get("prepay_id"));
+                String prepayId= String.valueOf(result.get("prepay_id"));
                 Long time = new Date().getTime();
                 String nonceStr = WeChatUtil.getRandomString(32);
-                returnObj.put("timeStamp",time);
+                returnObj.put("timeStamp",Usual.f_getString(time));
                 returnObj.put("nonceStr",nonceStr);
                 returnObj.put("package","prepay_id="+result.get("prepay_id"));
                 returnObj.put("signType","MD5");
                 //paySign签名算法
-                HashMap<String,String> paySignMap = new HashMap<String,String>();
+                HashMap<String,Object> paySignMap = new HashMap<String,Object>();
                 paySignMap.put("appId",params.appid);
                 paySignMap.put("nonceStr",nonceStr);
                 paySignMap.put("package","prepay_id="+prepayId);
                 paySignMap.put("signType","MD5");
-                paySignMap.put("timeStamp",StringUtil.toString(time));
+                paySignMap.put("timeStamp",Usual.f_getString(time));
                 String paySign = WeChatUtil.getSign(paySignMap,params.key);
                 returnObj.put("paySign",paySign);
                 return  ResultVoUtil.success(returnObj);
@@ -101,7 +100,7 @@ public class WeChatPayUtil {
      * @param iAfterSuccess（自定义结果处理方法）
      * @return
      */
-    public static String  wxPaymentResult(HttpServletResponse response, HttpServletRequest request, IPayAfterSuccess iAfterSuccess){
+    public static String wxPaymentResult(HttpServletResponse response, HttpServletRequest request, IPayAfterSuccess iAfterSuccess){
         String xmlResult = WeChatUtil.getWeChatResponse(request);
         //System.out.println(xmlResult);
         HashMap<String,Object> result = ConvertUtil.readStringXmlOut(xmlResult);
@@ -133,7 +132,7 @@ public class WeChatPayUtil {
      */
     public static ResultVo wechatRefund(WeChatRefundParmas params){
         //加密获取sign
-        HashMap<String,String> signMap = new HashMap<String,String>();
+        HashMap<String,Object> signMap = new HashMap<String,Object>();
         signMap.put("appid",params.appid);
         signMap.put("mch_id",params.mch_id);
         signMap.put("nonce_str",params.nonce_str);
@@ -141,26 +140,30 @@ public class WeChatPayUtil {
         signMap.put("out_refund_no",params.out_refund_no);
         signMap.put("total_fee",params.total_fee+"");
         signMap.put("refund_fee",params.refund_fee+"");
+        signMap.put("refund_desc",params.refund_desc);
         signMap.put("notify_url",params.notify_url);
         String sign = WeChatUtil.getSign(signMap,params.key);
         //请求参数
         WeChatRefundRequest entity = new WeChatRefundRequest();
         entity.appid=params.appid;
-         entity.mch_id=params.mch_id;
-         entity.nonce_str=params.nonce_str;
-         entity.out_trade_no=params.out_trade_no;
-         entity.out_refund_no=params.out_refund_no;
-         entity.total_fee=params.total_fee;
-         entity.refund_fee=params.refund_fee;
-         entity.notify_url=params.notify_url;
-        String xmlStr = ConvertUtil.objectToXml(entity).replace("__","_");
+        entity.mch_id=params.mch_id;
+        entity.nonce_str=params.nonce_str;
+        entity.out_trade_no=params.out_trade_no;
+        entity.out_refund_no=params.out_refund_no;
+        entity.total_fee=params.total_fee;
+        entity.refund_fee=params.refund_fee;
+        entity.refund_desc = params.refund_desc;
+        entity.notify_url=params.notify_url;
+        entity.sign = sign;
+        String xmlStr = ConvertUtil.objectToXml(entity);
         String responseStr = HttpUtil.httpResFulReturnString(Content.REFUND,"POST","text/xml;charset=utf-8","text/xml;charset=utf-8",xmlStr,true);
         logger.info("退款放回值");
         logger.info(responseStr);
         try {
             responseStr = new String(responseStr.getBytes("ISO-8859-1"),"utf-8");
         } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
+            logger.error(e.getMessage());
+            return  ResultVoUtil.fail(9999,"退款失败："+e.getMessage());
         }
         // System.out.println(responseStr);
         HashMap<String,Object> result = ConvertUtil.readStringXmlOut(responseStr);
@@ -187,7 +190,7 @@ public class WeChatPayUtil {
      * @param iAfterSuccess（自定义结果处理方法）
      * @return
      */
-    public static String  wxRefundResult(HttpServletResponse response, HttpServletRequest request, IRefundAfterSuccess iAfterSuccess){
+    public static String wxRefundResult(HttpServletResponse response, HttpServletRequest request, IRefundAfterSuccess iAfterSuccess){
         String xmlResult = WeChatUtil.getWeChatResponse(request);
         //System.out.println(xmlResult);
         HashMap<String,Object> result = ConvertUtil.readStringXmlOut(xmlResult);
@@ -217,7 +220,7 @@ public class WeChatPayUtil {
      * @param result
      * @return
      */
-    public static HashMap<String,Object>  refundDeciphering(HashMap<String,Object> result){
+    public static HashMap<String,Object> refundDeciphering(HashMap<String,Object> result){
         String xmlResult=WeChatUtil.decodeRefund(result.get("req_info").toString(),"微信Secret");
         HashMap<String,Object> zmlresult = ConvertUtil.readStringXmlOut(xmlResult);
         return zmlresult;
