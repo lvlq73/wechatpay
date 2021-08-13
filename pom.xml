@@ -10,7 +10,7 @@
 
     <properties>
         <!--密码包版本号  -->
-        <bouncycastle.version>1.55</bouncycastle.version>
+        <bouncycastle.version>1.67</bouncycastle.version>
     </properties>
 
     <dependencies>
